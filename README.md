@@ -21,7 +21,8 @@ How do we fix this?
 
 Step one was, as pictured a few paragraphs up, to switch flrig from 127.0.0.1 instead to 0.0.0.0.
 
-Step two (which I'd already done almost a year prior) is to set up "Commands" buttons to select ANT 1 or ANT 2.
+Step two (which I'd already done almost a year prior) is to set up "Commands" buttons to select ANT 1 or ANT 2. (Do NOT assume that
+the CAT commands to set antenna ports on your radio are the same as they are for mine, unless you are also using an FTdx3000.)
 
 ![image](https://github.com/user-attachments/assets/cb538cf1-f659-43c1-a3a2-6d6f4230635c)
 
