@@ -5,11 +5,9 @@ import xmlrpc.client
 from datetime import datetime
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
-
 FLRIG_HOST = "192.168.1.31"  # Replace with your flrig host
 FLRIG_PORT = 12345           # Default flrig XML-RPC port
 server_url = f"http://{FLRIG_HOST}:{FLRIG_PORT}/RPC2"
-
 
 class AntennaSwitchApp(QWidget):
     def __init__(self):
@@ -19,7 +17,8 @@ class AntennaSwitchApp(QWidget):
         # Initialize data
         self.current_frequency = "Unknown"
         self.current_antenna_port = "Unknown"
-        self.last_change_timestamp = "Never"
+        self.last_poll_timestamp = "Never"  # Renamed from last_change_timestamp
+        self.last_antenna_change_timestamp = "Never"  # New data attribute
         self.client = None
 
         # Initialize flrig connection
@@ -31,15 +30,17 @@ class AntennaSwitchApp(QWidget):
     def init_ui(self):
         """Initializes the GUI layout and widgets."""
         self.setWindowTitle("Antenna Switch Monitor")
-        
+
         self.frequency_label = QLabel("Current Frequency: Unknown")
         self.antenna_label = QLabel("Current Antenna Port: Unknown")
-        self.timestamp_label = QLabel("Last Change Timestamp: Never")
+        self.poll_timestamp_label = QLabel("Last Poll Timestamp: Never")  # Renamed
+        self.change_timestamp_label = QLabel("Last Antenna Change Timestamp: Never")  # New GUI row
 
         layout = QVBoxLayout()
         layout.addWidget(self.frequency_label)
         layout.addWidget(self.antenna_label)
-        layout.addWidget(self.timestamp_label)
+        layout.addWidget(self.poll_timestamp_label)
+        layout.addWidget(self.change_timestamp_label)  # Add new label to the layout
 
         self.setLayout(layout)
         self.resize(400, 200)
@@ -73,24 +74,31 @@ class AntennaSwitchApp(QWidget):
         """
         try:
             if self.client:
+                # Polling the current frequency
                 frequency_hz = float(self.client.rig.get_vfoA())
                 frequency_mhz = frequency_hz / 1e6
                 self.current_frequency = f"{frequency_mhz:.3f} MHz"
 
                 # Determine the correct antenna and button
                 antenna, button = self.determine_antenna_button(frequency_mhz)
-                if antenna and button:
-                    self.current_antenna_port = antenna  # Assume switching is successful
-                    self.last_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                    # Trigger the switch via flrig
-                    try:
-                        response = self.client.rig.cmd(button)
-                        # If no useful logging needed, ignore non-blocking responses completely.
-                        pass
-                    except Exception as e:
-                        print(f"Error switching antenna: {e}")
-                        self.current_antenna_port = "Switch Failed"
+                # Update the poll timestamp
+                self.last_poll_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                if antenna and button:
+                    # Check if the antenna needs to change
+                    if antenna != self.current_antenna_port:
+                        self.current_antenna_port = antenna  # Assume switching is successful
+                        self.last_antenna_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Update the change timestamp
+
+                        # Trigger the switch via flrig
+                        try:
+                            response = self.client.rig.cmd(button)
+                            # If no useful logging needed, ignore non-blocking responses completely.
+                            pass
+                        except Exception as e:
+                            print(f"Error switching antenna: {e}")
+                            self.current_antenna_port = "Switch Failed"
                 else:
                     # Frequency is out of range for antenna switching
                     self.current_antenna_port = "Out of Range"
@@ -107,10 +115,11 @@ class AntennaSwitchApp(QWidget):
         self.update_gui()
 
     def update_gui(self):
-        """Updates the GUI with the latest frequency, antenna port, and timestamp."""
+        """Updates the GUI with the latest frequency, antenna port, and timestamps."""
         self.frequency_label.setText(f"Current Frequency: {self.current_frequency}")
         self.antenna_label.setText(f"Current Antenna Port: {self.current_antenna_port}")
-        self.timestamp_label.setText(f"Last Change Timestamp: {self.last_change_timestamp}")
+        self.poll_timestamp_label.setText(f"Last Poll Timestamp: {self.last_poll_timestamp}")
+        self.change_timestamp_label.setText(f"Last Antenna Change Timestamp: {self.last_antenna_change_timestamp}")
 
     def start_worker_thread(self):
         """Starts the worker thread for the antenna switching loop."""
