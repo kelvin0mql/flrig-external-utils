@@ -72,7 +72,6 @@ class AntennaSwitchApp(QWidget):
         Core logic to determine the frequency and switch antenna ports.
         """
         try:
-            # Get the current frequency from flrig
             if self.client:
                 frequency_hz = float(self.client.rig.get_vfoA())
                 frequency_mhz = frequency_hz / 1e6
@@ -81,15 +80,14 @@ class AntennaSwitchApp(QWidget):
                 # Determine the correct antenna and button
                 antenna, button = self.determine_antenna_button(frequency_mhz)
                 if antenna and button:
-                    # Set GUI variables before switching
-                    self.current_antenna_port = antenna  # Assume switch will succeed
+                    self.current_antenna_port = antenna  # Assume switching is successful
                     self.last_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     # Trigger the switch via flrig
                     try:
                         response = self.client.rig.cmd(button)
-                        if response is not None:  # Add defensive check for unexpected response
-                            print(f"Unexpected response: {response}")
+                        # If no useful logging needed, ignore non-blocking responses completely.
+                        pass
                     except Exception as e:
                         print(f"Error switching antenna: {e}")
                         self.current_antenna_port = "Switch Failed"
@@ -100,7 +98,6 @@ class AntennaSwitchApp(QWidget):
                 # flrig is not connected
                 self.current_frequency = "Unknown (flrig not connected)"
                 self.current_antenna_port = "Unknown (flrig not connected)"
-
         except Exception as e:
             print(f"Error during antenna switching: {e}")
             self.current_frequency = "Error"
@@ -120,15 +117,21 @@ class AntennaSwitchApp(QWidget):
         threading.Thread(target=self.antenna_switching_loop, daemon=True).start()
 
     def antenna_switching_loop(self):
-        """Loop to switch antennas precisely every minute at :00.750 seconds."""
+        """Loop to switch antennas at :01, :16, :31, and :46 seconds."""
+        polling_times = [1, 16, 31, 46]  # Target times in seconds after the minute
         while True:
-            # Calculate sleep duration until the next :00.750 mark
             now = datetime.now()
-            seconds_to_next_minute = 60 - now.second - 1
-            sleep_time = seconds_to_next_minute + 0.750 - (now.microsecond / 1_000_000.0)
-            time.sleep(max(0, sleep_time))  # Ensure sleep time is never negative
+            current_second = now.second
 
-            # Perform the antenna switching
+            # Find the next target time
+            next_polling_time = next((t for t in polling_times if t > current_second), polling_times[0])
+            if next_polling_time > current_second:
+                sleep_time = next_polling_time - current_second
+            else:
+                # Wrap around to the next minute
+                sleep_time = 60 - current_second + next_polling_time
+
+            time.sleep(sleep_time)  # Sleep until the next target second
             self.switch_antenna()
 
 
