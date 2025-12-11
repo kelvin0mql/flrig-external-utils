@@ -5,7 +5,7 @@ import xmlrpc.client
 from datetime import datetime
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
-FLRIG_HOST = "192.168.1.31"  # Replace with your flrig host
+FLRIG_HOST = "127.0.0.1"  # Replace with your flrig host
 FLRIG_PORT = 12345           # Default flrig XML-RPC port
 server_url = f"http://{FLRIG_HOST}:{FLRIG_PORT}/RPC2"
 
@@ -61,9 +61,7 @@ class AntennaSwitchApp(QWidget):
         """
         if 1.8 <= frequency_mhz <= 2.0:  # 160m
             return "ANT2", 2  # ANT2 corresponds to User Button #2
-        elif 5.3 <= frequency_mhz <= 5.4:  # 60m
-            return "ANT2", 2  # ANT2 corresponds to User Button #2
-        elif 3.5 <= frequency_mhz <= 54:  # 80m to 6m
+        elif 5.3 <= frequency_mhz <= 54:  # 80m to 6m
             return "ANT1", 1  # ANT1 corresponds to User Button #1
         else:
             return None, None  # Frequency is out of supported range
@@ -86,8 +84,20 @@ class AntennaSwitchApp(QWidget):
                 self.last_poll_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 if antenna and button:
-                    # Check if the antenna needs to change
-                    if antenna != self.current_antenna_port:
+                    # Special handling for 60m band: Always hit Button 1 (ANT1) and Button 6 (15W)
+                    if 5.3 <= frequency_mhz <= 5.4:
+                        try:
+                            self.client.rig.cmd(1)
+                            self.client.rig.cmd(6)
+                            if self.current_antenna_port != antenna:
+                                self.last_antenna_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            self.current_antenna_port = antenna
+                        except Exception as e:
+                            print(f"Error switching antenna/power: {e}")
+                            self.current_antenna_port = "Switch Failed"
+
+                    # Check if the antenna needs to change (Normal logic)
+                    elif antenna != self.current_antenna_port:
                         self.current_antenna_port = antenna  # Assume switching is successful
                         self.last_antenna_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Update the change timestamp
 
