@@ -61,7 +61,7 @@ class AntennaSwitchApp(QWidget):
         """
         if 1.8 <= frequency_mhz <= 2.0:  # 160m
             return "ANT2", 2  # ANT2 corresponds to User Button #2
-        elif 5.3 <= frequency_mhz <= 54:  # 80m to 6m
+        elif 3.5 <= frequency_mhz <= 54:  # 80m to 6m
             return "ANT1", 1  # ANT1 corresponds to User Button #1
         else:
             return None, None  # Frequency is out of supported range
