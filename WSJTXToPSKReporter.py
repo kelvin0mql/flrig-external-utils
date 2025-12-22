@@ -10,15 +10,17 @@ from datetime import datetime, timedelta, timezone
 # Change these to match your station
 RECEIVER_CALLSIGN = "N0MQL"
 RECEIVER_LOCATOR = "EN35ld"  # e.g., "FN42hn"
-SOFTWARE_NAME = "ALL.TXT.ReSendDebug"
-SOFTWARE_VERSION = "1.0"
+RECEIVER_ANTENNA = "DXCommander Classic"
+RECEIVER_RIG = "Yaesu FTdx3000"
+SOFTWARE_NAME = "WSJT-X"
+SOFTWARE_VERSION = "v2.7.1-devel"
 
 # Path to WSJT-X ALL.TXT on your Linux machine
 ALL_TXT_PATH = os.path.expanduser("~/.local/share/WSJT-X/ALL.TXT")
 
 # PSK Reporter UDP settings
 PSK_REPORTER_HOST = "report.pskreporter.info"
-PSK_REPORTER_PORT = 14739  # Test port is 14739 (packets will be logged but not added to DB). Standard is 4739.
+PSK_REPORTER_PORT = 4739  # Test port is 14739. Standard is 4739.
 DEBUG_MODE = True        # Set to False for less verbose output
 
 # --- IPFIX CONSTANTS ---
@@ -27,7 +29,9 @@ ENTERPRISE_ID = 30351
 # Field IDs
 FIELD_SENDER_CALLSIGN = 1
 FIELD_RECEIVER_CALLSIGN = 2
+FIELD_RECEIVER_ANTENNA = 3
 FIELD_RECEIVER_LOCATOR = 4
+FIELD_RECEIVER_RIG = 6
 FIELD_FREQUENCY = 5
 FIELD_SENDER_LOCATOR = 8
 FIELD_MODE = 10
@@ -56,11 +60,13 @@ def create_template_packet(sequence_number):
     # If FieldID > 32767, it's Enterprise-specific: FieldID | 0x8000, FieldLength, EnterpriseID
     
     # For simplicity and based on pskdev documentation, we need to report:
-    # receiverCallsign, receiverLocator, senderCallsign, senderLocator, frequency, mode, flowStartSeconds
+    # receiverCallsign, receiverLocator, receiverAntenna, receiverRig, senderCallsign, senderLocator, frequency, mode, flowStartSeconds
     
     fields = [
         (FIELD_RECEIVER_CALLSIGN | 0x8000, 65535, ENTERPRISE_ID),
         (FIELD_RECEIVER_LOCATOR | 0x8000, 65535, ENTERPRISE_ID),
+        (FIELD_RECEIVER_ANTENNA | 0x8000, 65535, ENTERPRISE_ID),
+        (FIELD_RECEIVER_RIG | 0x8000, 65535, ENTERPRISE_ID),
         (FIELD_SENDER_CALLSIGN | 0x8000, 65535, ENTERPRISE_ID),
         (FIELD_SENDER_LOCATOR | 0x8000, 65535, ENTERPRISE_ID),
         (FIELD_FREQUENCY | 0x8000, 4, ENTERPRISE_ID),
@@ -102,6 +108,8 @@ def create_data_packet(sequence_number, spots):
         record = b""
         record += pack_string(RECEIVER_CALLSIGN)
         record += pack_string(RECEIVER_LOCATOR)
+        record += pack_string(RECEIVER_ANTENNA)
+        record += pack_string(RECEIVER_RIG)
         record += pack_string(spot['sender_callsign'])
         record += pack_string(spot['sender_locator'])
         record += struct.pack(">I", int(spot['frequency']))
