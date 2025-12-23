@@ -55,6 +55,7 @@ class AntennaSwitchApp(QWidget):
             print(f"Error connecting to flrig: {e}")
             self.client = None
 
+
     def get_band_name(self, freq_mhz):
         """Returns the band name for a given frequency in MHz."""
         if 1.8 <= freq_mhz <= 2.0:
@@ -96,24 +97,30 @@ class AntennaSwitchApp(QWidget):
                     self.current_frequency = f"{frequency_mhz:.3f} MHz ({band_name})"
                 else:
                     self.current_frequency = f"{frequency_mhz:.3f} MHz"
-
+                
                 # Update the poll timestamp
                 self.last_poll_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                # --- 160m Logic (ANT2) ---
+                # --- 160m Special Mode (RX on ANT3, TX on ANT2) ---
                 if 1.8 <= frequency_mhz <= 2.0:
                     try:
-                        # Ensure Split is OFF
+                        # Ensure Split is OFF (Internal radio logic handles RX/TX swap via R3/2)
                         if self.client.rig.get_split() != 0:
                             self.client.rig.set_split(0)
                         
-                        if self.current_antenna_port != "ANT2":
-                            self.client.rig.cmd(2) # ANT2
-                            self.current_antenna_port = "ANT2"
+                        if self.current_antenna_port != "ANTR3/2":
+                            print(f"Configuring 160m R3/2 mode at {self.current_frequency}")
+                            # Trigger User Button #9 (configured as AN03; in flrig)
+                            self.client.rig.cmd(9)
+                            
+                            self.current_antenna_port = "ANTR3/2"
                             self.last_antenna_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        else:
+                            self.current_antenna_port = "ANTR3/2"
+
                     except Exception as e:
-                        print(f"Error switching antenna (160m): {e}")
-                        self.current_antenna_port = "Switch Failed"
+                        print(f"Error setting 160m R3/2 mode: {e}")
+                        self.current_antenna_port = "Failed"
 
                 # --- 60m Special Logic ---
                 elif 5.3 <= frequency_mhz <= 5.4:
