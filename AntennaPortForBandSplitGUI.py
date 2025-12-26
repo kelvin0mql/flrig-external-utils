@@ -17,6 +17,7 @@ class AntennaSwitchApp(QWidget):
         # Initialize data
         self.current_frequency = "Unknown"
         self.current_antenna_port = "Unknown"
+        self.current_preamp_state = "Unknown"
         self.last_poll_timestamp = "Never"  # Renamed from last_change_timestamp
         self.last_antenna_change_timestamp = "Never"  # New data attribute
         self.client = None
@@ -33,12 +34,14 @@ class AntennaSwitchApp(QWidget):
 
         self.frequency_label = QLabel("Current Frequency: Unknown")
         self.antenna_label = QLabel("Current Antenna Port: Unknown")
+        self.preamp_label = QLabel("Preamp State: Unknown")
         self.poll_timestamp_label = QLabel("Last Poll Timestamp: Never")  # Renamed
         self.change_timestamp_label = QLabel("Last Antenna Change Timestamp: Never")  # New GUI row
 
         layout = QVBoxLayout()
         layout.addWidget(self.frequency_label)
         layout.addWidget(self.antenna_label)
+        layout.addWidget(self.preamp_label)
         layout.addWidget(self.poll_timestamp_label)
         layout.addWidget(self.change_timestamp_label)  # Add new label to the layout
 
@@ -118,6 +121,12 @@ class AntennaSwitchApp(QWidget):
                         else:
                             self.current_antenna_port = "ANTR3/2"
 
+                        # Ensure Preamp is set to AMP2 (User Button #12)
+                        if self.current_preamp_state != "AMP2":
+                            print(f"Setting 160m Preamp to AMP2")
+                            self.client.rig.cmd(12)
+                            self.current_preamp_state = "AMP2"
+
                     except Exception as e:
                         print(f"Error setting 160m R3/2 mode: {e}")
                         self.current_antenna_port = "Failed"
@@ -135,6 +144,13 @@ class AntennaSwitchApp(QWidget):
                             self.last_antenna_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
                         self.current_antenna_port = "ANT1"
+
+                        # Ensure Preamp is set to IPO (User Button #10)
+                        if self.current_preamp_state != "IPO":
+                            print(f"Setting Preamp to IPO")
+                            self.client.rig.cmd(10)
+                            self.current_preamp_state = "IPO"
+
                     except Exception as e:
                         print(f"Error switching antenna/power (60m): {e}")
                         self.current_antenna_port = "Switch Failed"
@@ -151,6 +167,12 @@ class AntennaSwitchApp(QWidget):
                             self.current_antenna_port = "ANT1"
                             self.last_antenna_change_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
+                        # Ensure Preamp is set to IPO (User Button #10)
+                        if self.current_preamp_state != "IPO":
+                            print(f"Setting Preamp to IPO")
+                            self.client.rig.cmd(10)
+                            self.current_preamp_state = "IPO"
+                            
                     except Exception as e:
                         print(f"Error switching antenna (Normal): {e}")
                         self.current_antenna_port = "Switch Failed"
@@ -171,9 +193,10 @@ class AntennaSwitchApp(QWidget):
         self.update_gui()
 
     def update_gui(self):
-        """Updates the GUI with the latest frequency, antenna port, and timestamps."""
+        """Updates the GUI with the latest frequency, antenna port, preamp state, and timestamps."""
         self.frequency_label.setText(f"Current Frequency: {self.current_frequency}")
         self.antenna_label.setText(f"Current Antenna Port: {self.current_antenna_port}")
+        self.preamp_label.setText(f"Preamp State: {self.current_preamp_state}")
         self.poll_timestamp_label.setText(f"Last Poll Timestamp: {self.last_poll_timestamp}")
         self.change_timestamp_label.setText(f"Last Antenna Change Timestamp: {self.last_antenna_change_timestamp}")
 
